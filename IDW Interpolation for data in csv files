@@ -1,0 +1,57 @@
+# DESCRIPTION
+# In this code, we first load the CSV file and convert it to a geodataframe containing points using pandas and geopandas.
+# We then save the geodataframe as a shapefile using the to_file method.
+# We define the resolution and bounding box of the output raster, and generate a regular grid of points using numpy.
+# We extract the field to be interpolated from the attribute table of the points, and interpolate the points to a surface using the IDW method with scipy.
+# Finally, we create a GeoTIFF file with the interpolated surface using rasterio.
+
+
+# import neccessary libraries
+import pandas as pd
+import geopandas as gpd
+import numpy as np
+import rasterio
+from rasterio import features
+from scipy.interpolate import Rbf
+
+# Load the CSV file and convert it to a geodataframe containing points
+df = pd.read_csv('/content/sample_data/table.csv')
+geometry = gpd.points_from_xy(df['POINT_X'], df['POINT_X'])
+gdf = gpd.GeoDataFrame(df, geometry=geometry, crs='epsg:4326')
+
+# Convert the geodataframe to a shapefile
+gdf.to_file('/content/sample_data/points.shp')
+
+# Define the resolution of the output raster in degrees
+resolution = 0.0001
+
+# Define the bounding box of the output raster
+xmin, ymin, xmax, ymax = gdf.total_bounds
+
+# Generate a regular grid of points with the specified resolution
+x = np.arange(xmin, xmax+resolution, resolution)
+y = np.arange(ymin, ymax+resolution, resolution)
+xx, yy = np.meshgrid(x, y)
+
+# Extract the field to be interpolated from the attribute table of the points
+field = 'POINT_Z'
+z = gdf[field].values
+
+# Interpolate the points to a surface using the IDW method
+rbf = Rbf(gdf['POINT_X'], gdf['POINT_Y'], z, function='linear')
+zz = rbf(xx, yy)
+
+# Create a raster file with the interpolated surface
+transform = rasterio.transform.from_bounds(xmin, ymin, xmax, ymax, zz.shape[1], zz.shape[0])
+profile = {
+    'driver': 'GTiff',
+    'height': zz.shape[0],
+    'width': zz.shape[1],
+    'count': 1,
+    'dtype': zz.dtype,
+    'crs': 'epsg:4326',
+    'transform': transform,
+    'nodata': -9999
+}
+with rasterio.open('/content/sample_data/surface_map.tif', 'w', **profile) as dst:
+    dst.write(zz, 1)
