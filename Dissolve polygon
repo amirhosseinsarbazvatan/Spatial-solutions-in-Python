@@ -1,0 +1,32 @@
+from osgeo import ogr
+
+# Open the input shapefile
+input_shapefile = ogr.Open('input.shp')
+
+# Get the first (and only) layer
+layer = input_shapefile.GetLayer(0)
+
+# Create a new output shapefile
+output_shapefile = ogr.GetDriverByName('ESRI Shapefile').CreateDataSource('output.shp')
+
+# Create a new layer for the output shapefile
+output_layer = output_shapefile.CreateLayer('output', layer.GetSpatialRef(), ogr.wkbPolygon)
+
+# Create a spatial reference object for the dissolved polygon
+dissolve_srs = ogr.osr.SpatialReference()
+dissolve_srs.ImportFromEPSG(4326) # or use any other appropriate EPSG code
+
+# Dissolve the polygons
+dissolved_geometry = ogr.Geometry(ogr.wkbPolygon)
+for feature in layer:
+    dissolved_geometry = dissolved_geometry.Union(feature.GetGeometryRef())
+
+# Add the dissolved polygon to the output layer
+feature_defn = output_layer.GetLayerDefn()
+feature = ogr.Feature(feature_defn)
+feature.SetGeometry(dissolved_geometry)
+output_layer.CreateFeature(feature)
+
+# Clean up
+input_shapefile = None
+output_shapefile = None
