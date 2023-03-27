@@ -1,0 +1,24 @@
+from osgeo import ogr
+
+# Open the Shapefile layer in update mode
+shapefile_path = "path/to/shapefile.shp"
+shapefile_driver = ogr.GetDriverByName("ESRI Shapefile")
+layer = shapefile_driver.Open(shapefile_path, 1).GetLayer()
+
+# Define the new field and add it to the layer
+new_field_name = "new_field"
+new_field_type = ogr.OFTString
+new_field_width = 50
+new_field_defn = ogr.FieldDefn(new_field_name, new_field_type)
+new_field_defn.SetWidth(new_field_width)
+layer.CreateField(new_field_defn)
+
+# Loop through each feature in the layer and set the new field value
+layer.ResetReading()
+for feature in layer:
+    feature[new_field_name] = "new_value"
+    layer.SetFeature(feature)
+
+# Clean up
+layer = None
+shapefile_driver = None
