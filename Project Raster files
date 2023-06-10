@@ -1,0 +1,21 @@
+
+# Python code for project raster files and change pixel size
+
+import arcpy
+from arcpy import env
+
+arcpy.env.overwriteOutput = True
+arcpy.CheckOutExtension("spatial")
+
+
+env.workspace = "Your workspace directory"
+outDir = "Your output direction"
+
+OutSR = arcpy.SpatialReference(32639) # "WGS_1984_UTM_Zone_39N"
+
+for raster in arcpy.ListRasters():
+    outPath = outDir+raster[:-4]+".tif"
+    arcpy.ProjectRaster_management(raster, outPath,OutSR, "BILINEAR")
+    print(" number of raster : ",raster)
+    
+print("All Done!")
