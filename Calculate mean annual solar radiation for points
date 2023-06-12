@@ -1,0 +1,45 @@
+import arcpy
+
+def calculate_mean_solar_radiation(dem_path, points_path, output_field):
+    # Check out the Spatial Analyst extension
+    arcpy.CheckOutExtension("Spatial")
+    
+    # Set environment variables
+    arcpy.env.workspace = "path_to_workspace"  # Replace with your workspace path
+    arcpy.env.scratchWorkspace = arcpy.env.workspace
+    
+    # Set the analysis extent to the DEM
+    arcpy.env.extent = dem_path
+    
+    # Generate the solar radiation raster
+    solar_rad_path = arcpy.sa.SolarRadiation(dem_path)
+    
+    # Extract the solar radiation values at the points
+    arcpy.sa.ExtractValuesToPoints(points_path, solar_rad_path, output_field)
+    
+    # Calculate the mean solar radiation for each point
+    arcpy.Statistics_analysis(points_path, "in_memory/mean_stats", [[output_field, "MEAN"]], "FID")
+    
+    # Add a new field to the points and populate it with the mean solar radiation
+    arcpy.AddField_management(points_path, "solar", "FLOAT")
+    
+    # Join the mean statistics table to the points based on FID
+    arcpy.JoinField_management(points_path, "FID", "in_memory/mean_stats", "FID", "MEAN")
+    
+    # Copy the mean solar radiation values to the 'solar' field
+    arcpy.CalculateField_management(points_path, "solar", "!MEAN!", "PYTHON")
+    
+    # Clean up intermediate datasets
+    arcpy.Delete_management("in_memory")
+    
+    print("Mean solar radiation calculation completed.")
+
+# Set the paths to the DEM raster and points feature class
+dem_path = "path_to_dem"  # Replace with your DEM path
+points_path = "path_to_points"  # Replace with your points feature class path
+
+# Specify the name of the output field to store the mean solar radiation
+output_field = "mean_solar_radiation"
+
+# Call the function to calculate the mean solar radiation for the points
+calculate_mean_solar_radiation(dem_path, points_path, output_field)
